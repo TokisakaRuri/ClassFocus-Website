@@ -1,0 +1,58 @@
+app:
+  name: ClassFocus
+  version: 1.0.0
+
+server:
+  host: 127.0.0.1
+  port: 8000
+
+storage:
+  upload_dir: uploads/videos
+  frame_dir: uploads/frames
+  result_dir: uploads/results
+  report_dir: uploads/reports
+
+database:
+  path: classroom_behavior.db
+
+model:
+  name: classroom_deim
+  path: models/best_stg2.pth
+  config_path: configs/detection/scb/deim_MSCF_s_oc3500.yml
+  repo_path: vendor/deim
+  confidence_threshold: 0.5
+  iou_threshold: 0.45
+  device: auto
+
+analysis:
+  frame_sample_seconds: 1
+  segment_seconds: 60
+  save_key_frames: true
+  max_key_frames: 24
+
+classes:
+  0: listening
+  1: writing
+  2: reading
+  3: using phone
+  4: bowing the head
+  5: sleeping
+
+behavior:
+  positive:
+    - listening
+    - writing
+    - reading
+  abnormal:
+    - using phone
+    - bowing the head
+    - sleeping
+
+risk_rules:
+  excellent_attention: 85
+  good_attention: 75
+  normal_attention: 60
+  using_phone_warning: 10
+  bowing_head_warning: 20
+  sleeping_warning: 5
+  sustained_low_attention_minutes: 10

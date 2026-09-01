@@ -1,0 +1,49 @@
+# DFINE-S MSCF (Faster & Hypergraph Enhanced)
+
+backbone:
+  # [from, module, args]
+  - [-1, Conv, [64, 3, 2]]  # 0
+  - [-1, Conv, [128, 3, 2]] # 1-P1/2
+
+  # 替换 C2f_Expert_Parallel 为 Faster_Expert_Parallel
+  # args: [out_channels, n_blocks] (其他参数如 num_hyperedges 在类定义中有默认值)
+  - [-1, Faster_Expert_Parallel, [128, 1]] # 2
+
+  - [-1, Conv, [256, 3, 2]]  # 3-P3/8
+  - [-1, Faster_Expert_Parallel, [256, 1]] # 4
+
+  - [-1, Conv, [384, 3, 2]]  # 5-P4/16
+  - [-1, Faster_Expert_Parallel, [384, 1]] # 6
+
+  - [-1, Conv, [512, 3, 2]]  # 7-P5/32
+  - [-1, Faster_Expert_Parallel, [512, 1]] # 8
+
+encoder:
+  - [4, ConvNormLayer_fuse, [256, 1, 1]] # 9-P3/8
+  - [6, ConvNormLayer_fuse, [256, 1, 1]] # 10-P4/16
+  - [8, ConvNormLayer_fuse, [256, 1, 1]] # 11-P5/32
+
+  # Transformer Encoder
+  - [-1, TransformerEncoderBlock, [8, 1024, 0.1, "relu", 10000, False]] # 12-P5/32
+
+  # FPN / PANet Structure
+  - [-1, ConvNormLayer_fuse, [256, 1, 1]] # 13
+  - [-1, nn.Upsample, [None, 2, "nearest"]] # 14
+  - [[-1, 10], Concat, []] # 15-P4/16
+  - [-1, RepNCSPELAN4, [256, 512, 64, 1, False, 'silu']] # 16-P4/16
+
+  - [-1, ConvNormLayer_fuse, [256, 1, 1]] # 17
+  - [-1, nn.Upsample, [None, 2, "nearest"]] # 18
+  - [[-1, 9], Concat, []] # 19-P3/8
+  - [-1, RepNCSPELAN4, [256, 512, 64, 1, False, 'silu']] # 20-P3/8
+
+  - [-1, SCDown, [256, 3, 2, 'silu']] # 21-P4/16
+  - [[-1, 17], Concat, []] # 22-P4/16
+  - [-1, RepNCSPELAN4, [256, 512, 64, 1, False, 'silu']] # 23-P4/16
+
+  - [-1, SCDown, [256, 3, 2, 'silu']] # 24-P5/32
+  - [[-1, 13], Concat, []] # 25-P5/32
+  - [-1, RepNCSPELAN4, [256, 512, 64, 1, False, 'silu']] # 26-P5/32
+
+decoder:
+  - [[20, 23, 26], DFINETransformer, {"feat_strides":[8, 16, 32], "hidden_dim": 256, "num_levels": 3, "num_layers": 3, "num_points": [3, 6, 3], "dim_feedforward": 1024}]

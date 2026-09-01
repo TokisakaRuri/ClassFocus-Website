@@ -1,0 +1,56 @@
+__include__: [
+  '../configs/dfine/dfine_hgnetv2_s_custom.yml',
+  'oc3500.yml',
+  '../configs/base/deim.yml'
+]
+
+print_freq: 300
+output_dir: ./outputs/Faster_Expert_Parallel_lite-3500
+
+model: DEIM_MG
+
+DEIM_MG:
+  yaml_path: configs/detection/scb/dfine-s-MSCF_EHGC.yaml
+
+
+optimizer:
+  type: AdamW
+  params:
+    -
+      params: '^(?=.*backbone)(?!.*norm|bn).*$'
+      lr: 0.0001
+    -
+      params: '^(?=.*backbone)(?=.*norm|bn).*$'
+      lr: 0.0001
+      weight_decay: 0.
+    -
+      params: '^(?=.*(?:encoder|decoder))(?=.*(?:norm|bn|bias)).*$'
+      weight_decay: 0.
+
+  lr: 0.0001
+  betas: [0.9, 0.999]
+  weight_decay: 0.001
+
+# Increase to search for the optimal ema
+epoches: 300 # 148 + 12
+
+## Our LR-Scheduler
+flat_epoch: 154   # 4 + epoch // 2, e.g., 40 = 4 + 72 / 2
+no_aug_epoch: 12
+lr_gamma: 1.0
+
+## Our DataAug
+train_dataloader:
+  dataset:
+    transforms:
+      policy:
+        epoch: [4,154, 268]  # list
+
+  collate_fn:
+    mixup_epochs:  [4, 154]
+    stop_epoch: 268
+    base_size_repeat: ~
+  total_batch_size: 4
+
+val_dataloader:
+  total_batch_size: 4
